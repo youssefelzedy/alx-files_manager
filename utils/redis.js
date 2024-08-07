@@ -23,7 +23,7 @@ class RedisClient {
     });
 
     this.client.on('connect', () => {
-      // console.log(`Redis client not connected to the server: ${error.message}`);
+      // console.log(`Redis client not connected to the server`);
     });
   }
 
