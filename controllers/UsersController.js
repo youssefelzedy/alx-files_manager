@@ -61,33 +61,33 @@ class UsersController {
     return response.status(201).send(user);
   }
 
-    /**
+  /**
      * Returns the user based on the token
      *
      * Retrieve the user based on the token:
      * If not found, return an error Unauthorized with a status code 401
      * Otherwise, return the user with a status code 200
      */
-    static async getMe(request, response) {
-        const { userId } = await userUtils.getUserIdAndKey(request);
+  static async getMe(request, response) {
+    const { userId } = await userUtils.getUserIdAndKey(request);
 
-        const user = await userUtils.getUser({
-            _id: ObjectId(userId),
-        });
+    const user = await userUtils.getUser({
+      _id: ObjectId(userId),
+    });
 
-        if (!user) {
-            return response.status(401).send({ error: 'Unauthorized' });
-        }
-
-        const processedUser = {
-            id: user._id,
-            ...user
-        };
-        delete processedUser._id;
-        delete processedUser.password;
-
-        return response.status(200).send(processedUser);
+    if (!user) {
+      return response.status(401).send({ error: 'Unauthorized' });
     }
+
+    const processedUser = {
+      id: user._id,
+      ...user,
+    };
+    delete processedUser._id;
+    delete processedUser.password;
+
+    return response.status(200).send(processedUser);
+  }
 }
 
 export default UsersController;
