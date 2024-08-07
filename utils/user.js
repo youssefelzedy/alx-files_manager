@@ -5,40 +5,40 @@ import dbClient from './db';
  * Module with user utilities
  */
 const userUtils = {
-    /**
+  /**
      * Gets a user id and key of redis from request
      * @request {request_object} express request obj
      * @return {object} object containing userId and
      * redis key for token
      */
-    async getUserIdAndKey(request) {
-        const obj = {
-            userId: null,
-            key: null,
-        };
+  async getUserIdAndKey(request) {
+    const obj = {
+      userId: null,
+      key: null,
+    };
 
-        const token = request.header('X-Token');
+    const token = request.header('X-Token');
 
-        if (!token) {
-            return obj;
-        }
+    if (!token) {
+      return obj;
+    }
 
-        obj.key = `auth_${token}`;
-        obj.userId = await redisClient.get(obj.key);
+    obj.key = `auth_${token}`;
+    obj.userId = await redisClient.get(obj.key);
 
-        return obj;
-    },
+    return obj;
+  },
 
-    /**
+  /**
      * Gets a user from database
      * @query {object} query expression for finding
      * user
      * @return {object} user document object
      */
-    async getUser(query) {
-        const user = await dbClient.usersCollection.findOne(query);
-        return user;
-    },
+  async getUser(query) {
+    const user = await dbClient.usersCollection.findOne(query);
+    return user;
+  },
 };
 
 export default userUtils;
