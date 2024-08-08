@@ -14,9 +14,9 @@ const fileUtils = {
    * @request {request_object} express request obj
    * @return {object} object with err and validated params
    */
-  async validateBody (request) {
+  async validateBody(request) {
     const {
-      name, type, isPublic = false, data
+      name, type, isPublic = false, data,
     } = request.body;
 
     let { parentId = 0 } = request.body;
@@ -37,7 +37,7 @@ const fileUtils = {
 
       if (basicUtils.isValidId(parentId)) {
         file = await this.getFile({
-          _id: ObjectId(parentId)
+          _id: ObjectId(parentId),
         });
       } else {
         file = null;
@@ -57,8 +57,8 @@ const fileUtils = {
         type,
         parentId,
         isPublic,
-        data
-      }
+        data,
+      },
     };
 
     return obj;
@@ -69,7 +69,7 @@ const fileUtils = {
    * @query {obj} query used to find file
    * @return {object} file
    */
-  async getFile (query) {
+  async getFile(query) {
     const file = await dbClient.filesCollection.findOne(query);
     return file;
   },
@@ -80,7 +80,7 @@ const fileUtils = {
    * @query {obj} query used to find file
    * @return {Array} list of files
    */
-  async getFilesOfParentId (query) {
+  async getFilesOfParentId(query) {
     const fileList = await dbClient.filesCollection.aggregate(query);
     return fileList;
   },
@@ -92,9 +92,9 @@ const fileUtils = {
    * @FOLDER_PATH {string} path to save file in disk
    * @return {obj} object with error if present and file
    */
-  async saveFile (userId, fileParams, FOLDER_PATH) {
+  async saveFile(userId, fileParams, FOLDER_PATH) {
     const {
-      name, type, isPublic, data
+      name, type, isPublic, data,
     } = fileParams;
     let { parentId } = fileParams;
 
@@ -105,7 +105,7 @@ const fileUtils = {
       name,
       type,
       isPublic,
-      parentId
+      parentId,
     };
 
     if (fileParams.type !== 'folder') {
@@ -144,11 +144,11 @@ const fileUtils = {
    * @set {obj} object with query info to update in Mongo
    * @return {object} updated file
    */
-  async updateFile (query, set) {
+  async updateFile(query, set) {
     const fileList = await dbClient.filesCollection.findOneAndUpdate(
       query,
       set,
-      { returnOriginal: false }
+      { returnOriginal: false },
     );
     return fileList;
   },
@@ -159,7 +159,7 @@ const fileUtils = {
    * @setPublish {boolean} true or false
    * @return {object} error, status code and updated file
    */
-  async publishUnpublish (request, setPublish) {
+  async publishUnpublish(request, setPublish) {
     const { id: fileId } = request.params;
 
     if (!basicUtils.isValidId(fileId)) { return { error: 'Unauthorized', code: 401 }; }
@@ -169,14 +169,14 @@ const fileUtils = {
     if (!basicUtils.isValidId(userId)) { return { error: 'Unauthorized', code: 401 }; }
 
     const user = await userUtils.getUser({
-      _id: ObjectId(userId)
+      _id: ObjectId(userId),
     });
 
     if (!user) return { error: 'Unauthorized', code: 401 };
 
     const file = await this.getFile({
       _id: ObjectId(fileId),
-      userId: ObjectId(userId)
+      userId: ObjectId(userId),
     });
 
     if (!file) return { error: 'Not found', code: 404 };
@@ -184,9 +184,9 @@ const fileUtils = {
     const result = await this.updateFile(
       {
         _id: ObjectId(fileId),
-        userId: ObjectId(userId)
+        userId: ObjectId(userId),
       },
-      { $set: { isPublic: setPublish } }
+      { $set: { isPublic: setPublish } },
     );
 
     const {
@@ -195,7 +195,7 @@ const fileUtils = {
       name,
       type,
       isPublic,
-      parentId
+      parentId,
     } = result.value;
 
     const updatedFile = {
@@ -204,7 +204,7 @@ const fileUtils = {
       name,
       type,
       isPublic,
-      parentId
+      parentId,
     };
 
     return { error: null, code: 200, updatedFile };
@@ -215,7 +215,7 @@ const fileUtils = {
    * @doc {object} document to be processed
    * @return {object} processed document
    */
-  processFile (doc) {
+  processFile(doc) {
     // Changes _id for id and removes localPath
 
     const file = { id: doc._id, ...doc };
@@ -233,10 +233,10 @@ const fileUtils = {
    * @userId {string} id of user to check ownership
    * @return {boolean} true or false
    */
-  isOwnerAndPublic (file, userId) {
+  isOwnerAndPublic(file, userId) {
     if (
-      (!file.isPublic && !userId) ||
-      (userId && file.userId.toString() !== userId && !file.isPublic)
+      (!file.isPublic && !userId)
+      || (userId && file.userId.toString() !== userId && !file.isPublic)
     ) { return false; }
 
     return true;
@@ -248,7 +248,7 @@ const fileUtils = {
    * @size {string} size in case of file being image
    * @return {object} data of file or error and status code
    */
-  async getFileData (file, size) {
+  async getFileData(file, size) {
     let { localPath } = file;
     let data;
 
@@ -262,7 +262,7 @@ const fileUtils = {
     }
 
     return { data };
-  }
+  },
 };
 
 export default fileUtils;

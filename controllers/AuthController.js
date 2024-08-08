@@ -19,35 +19,29 @@ class AuthController {
    * Return this token: { "token": "155342df-2399-41da-9e8c-458b6ac52a0c" }
    * with a status code 200
    */
-  static async getConnect(req, res) {
-    const Authorization = req.header('Authorization') || '';
+  static async getConnect(request, response) {
+    const Authorization = request.header('Authorization') || '';
 
     const credentials = Authorization.split(' ')[1];
 
-    if (!credentials) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
+    if (!credentials) { return response.status(401).send({ error: 'Unauthorized' }); }
 
-    const buff = Buffer.from(credentials, 'base64').toString('utf-8');
+    const decodedCredentials = Buffer.from(credentials, 'base64').toString(
+      'utf-8',
+    );
 
-    const [email, password] = buff.split(':');
+    const [email, password] = decodedCredentials.split(':');
 
-    if (!email || !password) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
+    if (!email || !password) { return response.status(401).send({ error: 'Unauthorized' }); }
 
     const sha1Password = sha1(password);
 
-    const user = await userUtils.getUser(
-      {
-        email,
-        password: sha1Password,
-      },
-    );
+    const user = await userUtils.getUser({
+      email,
+      password: sha1Password,
+    });
 
-    if (!user) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
+    if (!user) return response.status(401).send({ error: 'Unauthorized' });
 
     const token = uuidv4();
     const key = `auth_${token}`;
@@ -55,27 +49,25 @@ class AuthController {
 
     await redisClient.set(key, user._id.toString(), hoursForExpiration * 3600);
 
-    return res.status(200).send({ token });
+    return response.status(200).send({ token });
   }
 
   /**
-     * Should sign-out the user based on the token
-     *
-     * Retrieve the user based on the token:
-     * If not found, return an error Unauthorized with a status code 401
-     * Otherwise, delete the token in Redis and return nothing with a
-     * status code 204
-     */
-  static async getDisconnect(req, res) {
-    const { userId, key } = await userUtils.getUserIdAndKey(req);
+   * Should sign-out the user based on the token
+   *
+   * Retrieve the user based on the token:
+   * If not found, return an error Unauthorized with a status code 401
+   * Otherwise, delete the token in Redis and return nothing with a
+   * status code 204
+   */
+  static async getDisconnect(request, response) {
+    const { userId, key } = await userUtils.getUserIdAndKey(request);
 
-    if (!userId) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
+    if (!userId) return response.status(401).send({ error: 'Unauthorized' });
 
     await redisClient.del(key);
 
-    return res.status(204).send();
+    return response.status(204).send();
   }
 }
 

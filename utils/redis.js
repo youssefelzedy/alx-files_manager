@@ -2,16 +2,7 @@ import redis from 'redis';
 import { promisify } from 'util';
 
 /**
- * Class for RedisClient
- * @class RedisClient
- * @constructor
- * @param {Object} client - Redis client
- * @param {Function} getAsync - Promisified get function
- * @param {Function} on - Event listener
- * @param {Function} setex - Set with expiration
- * @param {Function} del - Delete key
- * @param {Function} isAlive - Check if client is connected
- * @param {Function} get - Get value from key
+ * Class for performing operations with Redis service
  */
 class RedisClient {
   constructor() {
@@ -23,7 +14,7 @@ class RedisClient {
     });
 
     this.client.on('connect', () => {
-      // console.log(`Redis client not connected to the server`);
+      // console.log('Redis client connected to the server');
     });
   }
 
@@ -67,4 +58,5 @@ class RedisClient {
 }
 
 const redisClient = new RedisClient();
+
 export default redisClient;

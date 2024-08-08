@@ -26,16 +26,15 @@ class UsersController {
    */
   static async postNew(request, response) {
     const { email, password } = request.body;
-    if (!email) {
-      return response.status(400).send({ error: 'Missing email' });
-    }
-    if (!password) {
-      return response.status(400).send({ error: 'Missing password' });
-    }
+
+    if (!email) return response.status(400).send({ error: 'Missing email' });
+
+    if (!password) { return response.status(400).send({ error: 'Missing password' }); }
+
     const emailExists = await dbClient.usersCollection.findOne({ email });
-    if (emailExists) {
-      return response.status(400).send({ error: 'Already exist' });
-    }
+
+    if (emailExists) { return response.status(400).send({ error: 'Already exist' }); }
+
     const sha1Password = sha1(password);
 
     let result;
@@ -62,12 +61,14 @@ class UsersController {
   }
 
   /**
-     * Returns the user based on the token
-     *
-     * Retrieve the user based on the token:
-     * If not found, return an error Unauthorized with a status code 401
-     * Otherwise, return the user with a status code 200
-     */
+   *
+   * Should retrieve the user base on the token used
+   *
+   * Retrieve the user based on the token:
+   * If not found, return an error Unauthorized with a
+   * status code 401
+   * Otherwise, return the user object (email and id only)
+   */
   static async getMe(request, response) {
     const { userId } = await userUtils.getUserIdAndKey(request);
 
@@ -75,14 +76,9 @@ class UsersController {
       _id: ObjectId(userId),
     });
 
-    if (!user) {
-      return response.status(401).send({ error: 'Unauthorized' });
-    }
+    if (!user) return response.status(401).send({ error: 'Unauthorized' });
 
-    const processedUser = {
-      id: user._id,
-      ...user,
-    };
+    const processedUser = { id: user._id, ...user };
     delete processedUser._id;
     delete processedUser.password;
 
