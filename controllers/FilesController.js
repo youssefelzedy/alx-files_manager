@@ -102,6 +102,76 @@ class FilesController {
 
     return response.status(201).send(newFile);
   }
+
+  static async getShow(request, response) {
+    // Retrieve the user based on the token
+    const { userId } = await userUtils.getUserIdAndKey(request);
+
+    if (!basicUtils.isValidId(userId)) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = await userUtils.getUser({
+      _id: ObjectId(userId),
+    });
+
+    if (!user) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
+
+    // Retrieve the file based on the ID passed as a parameter
+    const fileId = request.params.id;
+
+    if (!basicUtils.isValidId(fileId)) {
+      return response.status(404).send({ error: 'Not found' });
+    }
+
+    const file = await fileUtils.getFile({
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId),
+    });
+
+    if (!file) {
+      return response.status(404).send({ error: 'Not found' });
+    }
+
+    // Return the file document
+    return response.status(200).send(file);
+  }
+
+  static async getIndex(request, response) {
+    // Retrieve the user based on the token
+    const { userId } = await userUtils.getUserIdAndKey(request);
+
+    if (!basicUtils.isValidId(userId)) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = await userUtils.getUser({
+      _id: ObjectId(userId),
+    });
+
+    if (!user) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
+
+    // Get query parameters
+    const parentId = request.query.parentId || '0';
+    const page = parseInt(request.query.page, 10) || 0;
+    const pageSize = 20;
+
+    // Build the query for files
+    const query = {
+      userId: ObjectId(userId),
+      parentId: parentId === '0' ? 0 : ObjectId(parentId),
+    };
+
+    // Retrieve files with pagination
+    const files = await fileUtils.getFiles(query, page, pageSize);
+
+    // Return the list of file documents
+    return response.status(200).send(files);
+  }
 }
 
 export default FilesController;

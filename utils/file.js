@@ -161,6 +161,30 @@ const fileUtils = {
 
     return file;
   },
+  /**
+ * Retrieves files from the database with pagination.
+ *
+ * @param {Object} query - The query object to filter files.
+ * @param {number} page - The page number for pagination.
+ * @param {number} pageSize - The maximum number of files per page.
+ * @returns {Array} - An array of file documents.
+ */
+  async getFiles(query, page, pageSize) {
+    const skip = page * pageSize;
+
+    try {
+      const files = await dbClient.collection('files')
+        .find(query)
+        .skip(skip)
+        .limit(pageSize)
+        .toArray();
+
+      return files;
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      return [];
+    }
+  },
 
 };
 
