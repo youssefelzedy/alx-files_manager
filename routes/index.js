@@ -4,7 +4,7 @@ import UsersController from '../controllers/UsersController';
 import AuthController from '../controllers/AuthController';
 import FilesController from '../controllers/FilesController';
 
-function controllerRouting(app) {
+function controllerRouting (app) {
   const router = express.Router();
   app.use('/', router);
 

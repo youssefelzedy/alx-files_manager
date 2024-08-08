@@ -51,7 +51,7 @@ class FilesController {
    * localPath: for a type=file|image, the absolute path to the file save in local
    * Return the new file with a status code 201
    */
-  static async postUpload(request, response) {
+  static async postUpload (request, response) {
     const { userId } = await userUtils.getUserIdAndKey(request);
 
     if (!basicUtils.isValidId(userId)) {
@@ -63,7 +63,7 @@ class FilesController {
     }
 
     const user = await userUtils.getUser({
-      _id: ObjectId(userId),
+      _id: ObjectId(userId)
     });
 
     if (!user) {
@@ -71,7 +71,7 @@ class FilesController {
     }
 
     const { error: validationError, fileParams } = await fileUtils.validateBody(
-      request,
+      request
     );
 
     if (validationError) {
@@ -85,7 +85,7 @@ class FilesController {
     const { error, code, newFile } = await fileUtils.saveFile(
       userId,
       fileParams,
-      FOLDER_PATH,
+      FOLDER_PATH
     );
 
     if (error) {
@@ -96,81 +96,85 @@ class FilesController {
     if (fileParams.type === 'image') {
       await fileQueue.add({
         fileId: newFile.id.toString(),
-        userId: newFile.userId.toString(),
+        userId: newFile.userId.toString()
       });
     }
 
     return response.status(201).send(newFile);
   }
 
-  static async getShow(request, response) {
-    // Retrieve the user based on the token
-    const { userId } = await userUtils.getUserIdAndKey(request);
-
-    if (!basicUtils.isValidId(userId)) {
-      return response.status(401).send({ error: 'Unauthorized' });
-    }
-
-    const user = await userUtils.getUser({
-      _id: ObjectId(userId),
-    });
-
-    if (!user) {
-      return response.status(401).send({ error: 'Unauthorized' });
-    }
-
-    // Retrieve the file based on the ID passed as a parameter
+  static async getShow (request, response) {
     const fileId = request.params.id;
 
-    if (!basicUtils.isValidId(fileId)) {
-      return response.status(404).send({ error: 'Not found' });
-    }
+    const { userId } = await userUtils.getUserIdAndKey(request);
 
-    const file = await fileUtils.getFile({
-      _id: ObjectId(fileId),
-      userId: ObjectId(userId),
+    const user = await userUtils.getUser({
+      _id: ObjectId(userId)
     });
 
-    if (!file) {
-      return response.status(404).send({ error: 'Not found' });
-    }
+    if (!user) return response.status(401).send({ error: 'Unauthorized' });
 
-    // Return the file document
+    // Mongo Condition for Id
+    if (!basicUtils.isValidId(fileId) || !basicUtils.isValidId(userId)) { return response.status(404).send({ error: 'Not found' }); }
+
+    const result = await fileUtils.getFile({
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId)
+    });
+
+    if (!result) return response.status(404).send({ error: 'Not found' });
+
+    const file = fileUtils.processFile(result);
+
     return response.status(200).send(file);
   }
 
-  static async getIndex(request, response) {
-    // Retrieve the user based on the token
+  static async getIndex (request, response) {
     const { userId } = await userUtils.getUserIdAndKey(request);
 
-    if (!basicUtils.isValidId(userId)) {
-      return response.status(401).send({ error: 'Unauthorized' });
-    }
-
     const user = await userUtils.getUser({
-      _id: ObjectId(userId),
+      _id: ObjectId(userId)
     });
 
-    if (!user) {
-      return response.status(401).send({ error: 'Unauthorized' });
+    if (!user) return response.status(401).send({ error: 'Unauthorized' });
+
+    let parentId = request.query.parentId || '0';
+
+    if (parentId === '0') parentId = 0;
+
+    let page = Number(request.query.page) || 0;
+
+    if (Number.isNaN(page)) page = 0;
+
+    if (parentId !== 0 && parentId !== '0') {
+      if (!basicUtils.isValidId(parentId)) { return response.status(401).send({ error: 'Unauthorized' }); }
+
+      parentId = ObjectId(parentId);
+
+      const folder = await fileUtils.getFile({
+        _id: ObjectId(parentId)
+      });
+
+      if (!folder || folder.type !== 'folder') { return response.status(200).send([]); }
     }
 
-    // Get query parameters
-    const parentId = request.query.parentId || '0';
-    const page = parseInt(request.query.page, 10) || 0;
-    const pageSize = 20;
+    const pipeline = [
+      { $match: { parentId } },
+      { $skip: page * 20 },
+      {
+        $limit: 20
+      }
+    ];
 
-    // Build the query for files
-    const query = {
-      userId: ObjectId(userId),
-      parentId: parentId === '0' ? 0 : ObjectId(parentId),
-    };
+    const fileCursor = await fileUtils.getFilesOfParentId(pipeline);
 
-    // Retrieve files with pagination
-    const files = await fileUtils.getFiles(query, page, pageSize);
+    const fileList = [];
+    await fileCursor.forEach((doc) => {
+      const document = fileUtils.processFile(doc);
+      fileList.push(document);
+    });
 
-    // Return the list of file documents
-    return response.status(200).send(files);
+    return response.status(200).send(fileList);
   }
 }
 

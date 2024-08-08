@@ -14,9 +14,9 @@ const fileUtils = {
    * @request {request_object} express request obj
    * @return {object} object with err and validated params
    */
-  async validateBody(request) {
+  async validateBody (request) {
     const {
-      name, type, isPublic = false, data,
+      name, type, isPublic = false, data
     } = request.body;
 
     let { parentId = 0 } = request.body;
@@ -38,7 +38,7 @@ const fileUtils = {
 
       if (basicUtils.isValidId(parentId)) {
         file = await this.getFile({
-          _id: ObjectId(parentId),
+          _id: ObjectId(parentId)
         });
       } else {
         file = null;
@@ -57,8 +57,8 @@ const fileUtils = {
         type,
         isPublic,
         parentId,
-        data,
-      },
+        data
+      }
     };
     return obj;
   },
@@ -68,7 +68,7 @@ const fileUtils = {
      * @query {obj} query used to find file
      * @return {object} file
      */
-  async getFile(query) {
+  async getFile (query) {
     const file = await dbClient.filesCollection.findOne(query);
     return file;
   },
@@ -79,7 +79,7 @@ const fileUtils = {
      * @query {obj} query used to find file
      * @return {Array} list of files
      */
-  async getFilesOfParentId(query) {
+  async getFilesOfParentId (query) {
     const fileList = await dbClient.filesCollection.aggregate(query);
     return fileList;
   },
@@ -90,9 +90,9 @@ const fileUtils = {
    * @FOLDER_PATH {string} path to save file in disk
    * @return {obj} object with error if present and file
    */
-  async saveFile(userId, fileParams, FOLDER_PATH) {
+  async saveFile (userId, fileParams, FOLDER_PATH) {
     const {
-      name, type, isPublic, data,
+      name, type, isPublic, data
     } = fileParams;
     let { parentId } = fileParams;
 
@@ -103,7 +103,7 @@ const fileUtils = {
       name,
       type,
       isPublic,
-      parentId,
+      parentId
     };
 
     if (fileParams.type !== 'folder') {
@@ -138,11 +138,11 @@ const fileUtils = {
     * @set {obj} object with query info to update in Mongo
     * @return {object} updated file
     */
-  async updateFile(query, set) {
+  async updateFile (query, set) {
     const fileList = await dbClient.filesCollection.findOneAndUpdate(
       query,
       set,
-      { returnOriginal: false },
+      { returnOriginal: false }
     );
     return fileList;
   },
@@ -151,7 +151,7 @@ const fileUtils = {
      * @doc {object} document to be processed
      * @return {object} processed document
      */
-  processFile(doc) {
+  processFile (doc) {
     // Changes _id for id and removes localPath
 
     const file = { id: doc._id, ...doc };
@@ -160,31 +160,7 @@ const fileUtils = {
     delete file._id;
 
     return file;
-  },
-  /**
- * Retrieves files from the database with pagination.
- *
- * @param {Object} query - The query object to filter files.
- * @param {number} page - The page number for pagination.
- * @param {number} pageSize - The maximum number of files per page.
- * @returns {Array} - An array of file documents.
- */
-  async getFiles(query, page, pageSize) {
-    const skip = page * pageSize;
-
-    try {
-      const files = await dbClient.collection('files')
-        .find(query)
-        .skip(skip)
-        .limit(pageSize)
-        .toArray();
-
-      return files;
-    } catch (error) {
-      console.error('Error fetching files:', error);
-      return [];
-    }
-  },
+  }
 
 };
 
