@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import { promises as fsPromises } from 'fs';
 import dbClient from './db';
-// import userUtils from './user';
+import userUtils from './user';
 import basicUtils from './basic';
 
 /**
@@ -22,7 +22,6 @@ const fileUtils = {
     let { parentId = 0 } = request.body;
 
     const typesAllowed = ['file', 'image', 'folder'];
-
     let msg = null;
 
     if (parentId === '0') parentId = 0;
@@ -50,39 +49,42 @@ const fileUtils = {
         msg = 'Parent is not a folder';
       }
     }
+
     const obj = {
       error: msg,
       fileParams: {
         name,
         type,
-        isPublic,
         parentId,
+        isPublic,
         data
       }
     };
+
     return obj;
   },
 
   /**
-     * gets file document from db
-     * @query {obj} query used to find file
-     * @return {object} file
-     */
+   * gets file document from db
+   * @query {obj} query used to find file
+   * @return {object} file
+   */
   async getFile (query) {
     const file = await dbClient.filesCollection.findOne(query);
     return file;
   },
 
   /**
-     * gets list of file documents from db belonging
-     * to a parent id
-     * @query {obj} query used to find file
-     * @return {Array} list of files
-     */
+   * gets list of file documents from db belonging
+   * to a parent id
+   * @query {obj} query used to find file
+   * @return {Array} list of files
+   */
   async getFilesOfParentId (query) {
     const fileList = await dbClient.filesCollection.aggregate(query);
     return fileList;
   },
+
   /**
    * saves files to database and disk
    * @userId {string} query used to find file
@@ -126,18 +128,22 @@ const fileUtils = {
 
     const result = await dbClient.filesCollection.insertOne(query);
 
+    // query.userId = query.userId.toString();
+    // query.parentId = query.parentId.toString();
+
     const file = this.processFile(query);
 
     const newFile = { id: result.insertedId, ...file };
 
     return { error: null, newFile };
   },
+
   /**
-    * Updates a file document in database
-    * @query {obj} query to find document to update
-    * @set {obj} object with query info to update in Mongo
-    * @return {object} updated file
-    */
+   * Updates a file document in database
+   * @query {obj} query to find document to update
+   * @set {obj} object with query info to update in Mongo
+   * @return {object} updated file
+   */
   async updateFile (query, set) {
     const fileList = await dbClient.filesCollection.findOneAndUpdate(
       query,
@@ -146,11 +152,69 @@ const fileUtils = {
     );
     return fileList;
   },
+
   /**
-     * Transform _id into id in a file document
-     * @doc {object} document to be processed
-     * @return {object} processed document
-     */
+   * Makes a file public or private
+   * @request {request_object} express request obj
+   * @setPublish {boolean} true or false
+   * @return {object} error, status code and updated file
+   */
+  async publishUnpublish (request, setPublish) {
+    const { id: fileId } = request.params;
+
+    if (!basicUtils.isValidId(fileId)) { return { error: 'Unauthorized', code: 401 }; }
+
+    const { userId } = await userUtils.getUserIdAndKey(request);
+
+    if (!basicUtils.isValidId(userId)) { return { error: 'Unauthorized', code: 401 }; }
+
+    const user = await userUtils.getUser({
+      _id: ObjectId(userId)
+    });
+
+    if (!user) return { error: 'Unauthorized', code: 401 };
+
+    const file = await this.getFile({
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId)
+    });
+
+    if (!file) return { error: 'Not found', code: 404 };
+
+    const result = await this.updateFile(
+      {
+        _id: ObjectId(fileId),
+        userId: ObjectId(userId)
+      },
+      { $set: { isPublic: setPublish } }
+    );
+
+    const {
+      _id: id,
+      userId: resultUserId,
+      name,
+      type,
+      isPublic,
+      parentId
+    } = result.value;
+
+    const updatedFile = {
+      id,
+      userId: resultUserId,
+      name,
+      type,
+      isPublic,
+      parentId
+    };
+
+    return { error: null, code: 200, updatedFile };
+  },
+
+  /**
+   * Transform _id into id in a file document
+   * @doc {object} document to be processed
+   * @return {object} processed document
+   */
   processFile (doc) {
     // Changes _id for id and removes localPath
 
@@ -160,8 +224,45 @@ const fileUtils = {
     delete file._id;
 
     return file;
-  }
+  },
 
+  /**
+   * Checks if a file is public and belongs to a
+   * specific user
+   * @file {object} file to evaluate
+   * @userId {string} id of user to check ownership
+   * @return {boolean} true or false
+   */
+  isOwnerAndPublic (file, userId) {
+    if (
+      (!file.isPublic && !userId) ||
+      (userId && file.userId.toString() !== userId && !file.isPublic)
+    ) { return false; }
+
+    return true;
+  },
+
+  /**
+   * Gets a files data from database
+   * @file {object} file to obtain data of
+   * @size {string} size in case of file being image
+   * @return {object} data of file or error and status code
+   */
+  async getFileData (file, size) {
+    let { localPath } = file;
+    let data;
+
+    if (size) localPath = `${localPath}_${size}`;
+
+    try {
+      data = await fsPromises.readFile(localPath);
+    } catch (err) {
+      // console.log(err.message);
+      return { error: 'Not found', code: 404 };
+    }
+
+    return { data };
+  }
 };
 
 export default fileUtils;
